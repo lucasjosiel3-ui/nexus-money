@@ -1,0 +1,166 @@
+{
+  "receitas": 2000,
+  "despesas": 0,
+  "status@broadcast": {
+    "receitas": 0,
+    "despesas": []
+  },
+  "558486290037@c.us": {
+    "receitas": 350,
+    "despesas": 28
+  },
+  "5511954047859-1574981269@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363423390009292@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558499380379@c.us": {
+    "receitas": 0,
+    "despesas": [
+      {
+        "valor": 100,
+        "descricao": "mercado",
+        "categoria": "alimentação",
+        "data": "16/03"
+      },
+      {
+        "valor": 50,
+        "descricao": "uber",
+        "categoria": "transporte",
+        "data": "16/03"
+      },
+      {
+        "valor": 200,
+        "descricao": "cinema",
+        "categoria": "lazer",
+        "data": "16/03"
+      }
+    ]
+  },
+  "558496947085-1579979600@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363168277906598@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363405800801354@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363024606773837@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558581199184@c.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "43049128308826@lid": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "261482558259302@lid": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "5511985515994@c.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558499203099@c.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558487166503@c.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "80711075778580@lid": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "5521969930112@c.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "127024412778657@lid": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558496847210@c.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363405896586636@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558498105895@c.us": {
+    "receitas": 100,
+    "despesas": 9
+  },
+  "120363420946452145@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363179090468605@newsletter": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363364942457242@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363385841515577@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363030097545647@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "558491299320@c.us": {
+    "receitas": 120,
+    "despesas": []
+  },
+  "120363377333058127@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363301878611734@newsletter": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363422047724680@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363408224778532@g.us": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "120363169274631787@newsletter": {
+    "receitas": 0,
+    "despesas": 0
+  },
+  "106274771447808@lid": {
+    "nome": "josiel476",
+    "aguardandoNome": false,
+    "receitas": 0,
+    "despesas": [
+      {
+        "valor": 250,
+        "descricao": "jordan",
+        "categoria": "fraldas",
+        "data": "06/05"
+      }
+    ],
+    "contas": [],
+    "senhaTemp": "6ogetm"
+  }
+}
