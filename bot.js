@@ -1,6 +1,7 @@
 const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
+const fetch = require('node-fetch');
 
 const client = new Client();
 
@@ -106,43 +107,43 @@ Digite *dashboard* para acessar novamente.`);
     }
 
     // 💰 RECEITA
-    if (texto.startsWith('receita')) {
-        const partes = texto.split('|').map(p => p.trim());
-        const valor = parseFloat(partes[1]?.replace(',', '.'));
+   if (texto.startsWith('receita')) {
 
-        if (isNaN(valor)) {
-            return msg.reply('❌ Valor inválido.\nUse: receita | 1000 | salario | empresa | 16/03');
-        }
+    const partes = texto.split('|').map(p => p.trim());
+    const valor = parseFloat(partes[1].replace(',', '.'));
 
-        user.receitas += valor;
-        salvarDados();
+    user.receitas += valor;
+    salvarDados();
 
-        return msg.reply(`💰 ${user.nome}, receita registrada!
+    msg.reply(`💰 *Receita registrada!*
 
-Valor: R$${valor.toFixed(2).replace('.', ',')}`);
+📌 Descrição: ${partes[2] || '---'}
+🏢 Fonte: ${partes[3] || '---'}
+📅 Data: ${partes[4] || '---'}
+💵 Valor: R$${valor}`);
     }
 
     // 💸 DESPESA
     else if (texto.startsWith('despesa')) {
-        const partes = texto.split('|').map(p => p.trim());
-        const valor = parseFloat(partes[1]?.replace(',', '.'));
 
-        if (isNaN(valor)) {
-            return msg.reply('❌ Valor inválido.\nUse: despesa | 100 | mercado | alimentação | 16/03');
-        }
+    const partes = texto.split('|').map(p => p.trim());
+    const valor = parseFloat(partes[1].replace(',', '.'));
 
-        user.despesas.push({
-            valor,
-            descricao: partes[2],
-            categoria: partes[3],
-            data: partes[4]
-        });
+    user.despesas.push({
+        valor,
+        descricao: partes[2],
+        categoria: partes[3],
+        data: partes[4]
+    });
 
-        salvarDados();
+    salvarDados();
 
-        return msg.reply(`💸 ${user.nome}, despesa registrada!
+    msg.reply(`💸 *Despesa registrada!*
 
-Valor: R$${valor.toFixed(2).replace('.', ',')}`);
+📌 Descrição: ${partes[2]}
+📁 Categoria: ${partes[3]}
+📅 Data: ${partes[4]}
+💰 Valor: R$${valor}`);
     }
 
     // 📊 RELATÓRIO
@@ -176,52 +177,51 @@ Valor: R$${valor.toFixed(2).replace('.', ',')}`);
     }
 
     // 🧠 ANÁLISE INTELIGENTE
-    else if (texto.startsWith('analise')) {
+    else if (texto === 'analise') {
 
-        if (user.despesas.length === 0) {
-            return msg.reply('🧠 Nenhuma despesa registrada.');
-        }
+    const receitas = user.receitas || 0;
+    const despesas = user.despesas || [];
 
-        let totalDespesas = user.despesas.reduce((s, d) => s + d.valor, 0);
-        let receitas = user.receitas;
+    const total = despesas.reduce((s, d) => s + d.valor, 0);
 
-        let porcentagem = receitas > 0
-            ? ((totalDespesas / receitas) * 100).toFixed(0)
-            : 0;
-
-        let categorias = {};
-        user.despesas.forEach(d => {
-            categorias[d.categoria] = (categorias[d.categoria] || 0) + d.valor;
-        });
-
-        let maiorCategoria = Object.keys(categorias).reduce((a, b) =>
-            categorias[a] > categorias[b] ? a : b
-        );
-
-        let alerta = '';
-        if (porcentagem >= 80) alerta = '⚠️ Gastos muito altos!';
-        else if (porcentagem >= 50) alerta = '⚠️ Atenção com seus gastos';
-        else alerta = '✅ Controle financeiro OK';
-
-        return msg.reply(`🧠 *Análise Financeira*
-
-📊 Você gastou ${porcentagem}% da sua renda
-
-📂 Maior gasto: ${maiorCategoria}
-
-${alerta}
-
-💡 Dica: reduza gastos em ${maiorCategoria}`);
+    if (receitas === 0) {
+        return msg.reply('⚠️ Você ainda não registrou receitas.');
     }
 
-    // 🌐 DASHBOARD
-    else if (texto === 'dashboard') {
+    const porcentagem = Math.round((total / receitas) * 100);
 
-        const numeroLimpo = numero.replace('@c.us', '');
+    let maior = despesas.sort((a, b) => b.valor - a.valor)[0];
 
-        return msg.reply(`🌐 ${user.nome}, acesse seu painel:
+    let mensagem = `🧠 *Análise Financeira*
 
-🔗 http://localhost:3000/login/${numeroLimpo}`);
+📊 Geral
+
+📁 Maior gasto: ${maior?.descricao || '---'} (R$${maior?.valor || 0})
+💸 Total gasto: R$${total}
+💰 Receitas: R$${receitas}
+
+📊 Você gastou ${porcentagem}% da sua renda
+`;
+
+    if (porcentagem > 70) {
+        mensagem += `⚠️ Atenção com seus gastos.\n`;
+    }
+
+    if (maior) {
+    mensagem += `💡 Dica: tente reduzir gastos em ${maior.descricao}`;
+}
+
+return msg.reply(mensagem);
+}
+
+// 🌐 DASHBOARD
+else if (texto === 'dashboard') {
+
+    const numeroLimpo = numero.replace('@c.us', '');
+
+    return msg.reply(`🌐 ${user.nome}, acesse seu painel:
+
+🔗 https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
     }
 
     // 🧹 RESET

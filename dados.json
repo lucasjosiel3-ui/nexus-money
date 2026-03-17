@@ -151,8 +151,14 @@
   "106274771447808@lid": {
     "nome": "josiel476",
     "aguardandoNome": false,
-    "receitas": 0,
+    "receitas": 3000,
     "despesas": [
+      {
+        "valor": 250,
+        "descricao": "jordan",
+        "categoria": "fraldas",
+        "data": "06/05"
+      },
       {
         "valor": 250,
         "descricao": "jordan",

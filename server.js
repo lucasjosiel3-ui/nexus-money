@@ -24,6 +24,29 @@ function gerarSenhaTemp() {
     return Math.random().toString(36).slice(-6);
 }
 
+// 🚀 API CRIAR USUÁRIO
+app.get('/api/criar-usuario/:numero/:nome', (req, res) => {
+
+    let dados = JSON.parse(fs.readFileSync('dados.json'));
+
+    const numero = req.params.numero + '@c.us';
+    const nome = req.params.nome;
+
+    if (!dados[numero]) {
+        dados[numero] = {
+            nome: nome,
+            aguardandoNome: false,
+            receitas: 0,
+            despesas: [],
+            contas: []
+        };
+
+        fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+    }
+
+    res.send({ status: 'ok' });
+});
+
 // 🏠 HOME
 app.get('/', (req, res) => {
     res.send(`
