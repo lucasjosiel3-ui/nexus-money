@@ -14,6 +14,11 @@ app.use(session({
     saveUninitialized: true
 }));
 
+// 🔥 GARANTE QUE O ARQUIVO EXISTE
+if (!fs.existsSync('dados.json')) {
+    fs.writeFileSync('dados.json', JSON.stringify({}, null, 2));
+}
+
 // 🔑 GERAR SENHA TEMP
 function gerarSenhaTemp() {
     return Math.random().toString(36).slice(-6);
@@ -41,19 +46,16 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 🔐 LOGIN (GERA SENHA SE NÃO EXISTIR)
+// 🔐 LOGIN
 app.get('/login/:numero', (req, res) => {
 
-    let dados = fs.existsSync('dados.json')
-        ? JSON.parse(fs.readFileSync('dados.json'))
-        : {};
+    let dados = JSON.parse(fs.readFileSync('dados.json'));
 
     const numero = req.params.numero + '@c.us';
     const user = dados[numero];
 
     if (!user) return res.send('Usuário não encontrado');
 
-    // 🔥 GERA SENHA TEMP AUTOMÁTICA
     if (!user.senha && !user.senhaTemp) {
 
         const senhaTemp = gerarSenhaTemp();
@@ -68,8 +70,6 @@ app.get('/login/:numero', (req, res) => {
 
             <p>Sua senha temporária:</p>
             <h1>${senhaTemp}</h1>
-
-            <p>Use essa senha para entrar:</p>
 
             <a href="/login-form/${req.params.numero}">
                 <button style="padding:10px;background:#22c55e;border:none;">Ir para login</button>
@@ -108,14 +108,11 @@ app.post('/login', async (req, res) => {
 
     if (!user) return res.send('Usuário não encontrado');
 
-    // 🔐 SENHA TEMP
     if (user.senhaTemp && senha === user.senhaTemp) {
         req.session.usuario = numero;
-        req.session.temp = true;
         return res.redirect(`/nova-senha/${numero.replace('@c.us','')}`);
     }
 
-    // 🔐 SENHA NORMAL
     const senhaValida = await bcrypt.compare(senha, user.senha || '');
 
     if (!senhaValida) return res.send('❌ Senha inválida');
@@ -207,6 +204,7 @@ app.get('/user/:numero', (req, res) => {
     `);
 });
 
+// 🚀 SERVIDOR
 app.listen(PORT, () => {
-    console.log("Servidor rodando em http://localhost:3000");
+    console.log(`Servidor rodando na porta ${PORT}`);
 });
