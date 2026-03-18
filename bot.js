@@ -225,7 +225,6 @@ else if (texto.startsWith('agendar')) {
     data,
     pago: false,
     notificado: false // 🔥 NECESSÁRIO
-});
     });
 
     // 📅 ORDENAR POR DATA
@@ -236,6 +235,11 @@ else if (texto.startsWith('agendar')) {
     });
 
     salvarDados();
+
+// 🚀 ENVIA PRO SERVER
+const numeroLimpo = numero.replace('@c.us', '');
+
+await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${descricao}/${valor}/${data}/${tipoFinal}`);
 
     // 📆 VERIFICAR SE É HOJE
     const hoje = new Date();

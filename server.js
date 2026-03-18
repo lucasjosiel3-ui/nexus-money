@@ -50,6 +50,33 @@ app.get('/api/criar-usuario/:numero/:nome/:senha', (req, res) => {
     res.send({ status: 'ok' });
 });
 
+// 🚀 API ADICIONAR CONTA
+app.get('/api/adicionar-conta/:numero/:descricao/:valor/:data/:tipo', (req, res) => {
+
+    let dados = JSON.parse(fs.readFileSync('dados.json'));
+
+    const numero = req.params.numero + '@c.us';
+
+    if (!dados[numero]) return res.send('Usuário não encontrado');
+
+    if (!dados[numero].contas) {
+        dados[numero].contas = [];
+    }
+
+    dados[numero].contas.push({
+        descricao: req.params.descricao,
+        valor: parseFloat(req.params.valor),
+        data: req.params.data,
+        tipo: req.params.tipo,
+        pago: false,
+        notificado: false
+    });
+
+    fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+
+    res.send({ status: 'ok' });
+});
+
 // 🧹 API DELETAR USUÁRIO
 app.get('/api/deletar-usuario/:numero', (req, res) => {
 

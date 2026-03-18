@@ -149,10 +149,19 @@
     "despesas": 0
   },
   "106274771447808@lid": {
-    "nome": "josielsilva428",
+    "nome": "josielsilva896",
     "aguardandoNome": false,
     "receitas": 0,
     "despesas": [],
-    "contas": []
+    "contas": [
+      {
+        "valor": 50,
+        "descricao": "claro",
+        "tipo": "fixa",
+        "data": "18/03",
+        "pago": false,
+        "notificado": false
+      }
+    ]
   }
 }
