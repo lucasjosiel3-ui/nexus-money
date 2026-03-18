@@ -215,23 +215,66 @@ app.get('/user/:numero', (req, res) => {
 
     const formatar = v => v.toFixed(2).replace('.', ',');
 
+// ✅ MARCAR CONTA COMO PAGA
+app.get('/pagar/:numero/:index', (req, res) => {
+
+    let dados = JSON.parse(fs.readFileSync('dados.json'));
+
+    const numero = req.params.numero + '@c.us';
+    const index = parseInt(req.params.index);
+
+    if (!dados[numero]) return res.send('Usuário não encontrado');
+
+    if (dados[numero].contas && dados[numero].contas[index]) {
+        dados[numero].contas[index].pago = true;
+    }
+
+    fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+
+    res.redirect(`/user/${req.params.numero}`);
+});
+
 // 📅 GERAR HTML DAS CONTAS
 let contasHTML = '';
 
 if (contas.length === 0) {
     contasHTML = '<p>Nenhuma conta agendada.</p>';
 } else {
-    contas.forEach(c => {
+    contas.forEach((c, i) => {
+
+        const status = c.pago 
+            ? '✅ Pago'
+            : '⏳ Pendente';
+
+        const botao = c.pago
+            ? ''
+            : `<a href="/pagar/${req.params.numero}/${i}">
+                <button style="
+                    margin-top:8px;
+                    padding:5px 10px;
+                    background:#22c55e;
+                    border:none;
+                    border-radius:5px;
+                    cursor:pointer;
+                ">
+                    Pagar
+                </button>
+               </a>`;
+
         contasHTML += `
             <div style="
                 background:#020617;
                 padding:10px;
                 border-radius:10px;
                 margin-bottom:10px;
+                border-left:5px solid ${c.pago ? '#22c55e' : '#ef4444'};
             ">
                 <strong>${c.descricao || 'Conta'}</strong><br>
                 📅 ${c.data || '---'}<br>
-                💰 R$ ${formatar(c.valor || 0)}
+                💰 R$ ${formatar(c.valor || 0)}<br>
+                ${status}
+                <br>
+                ${botao}
             </div>
         `;
     });

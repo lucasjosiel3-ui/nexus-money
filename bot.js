@@ -23,6 +23,14 @@ function salvarDados() {
     fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
 }
 
+// 🔄 CARREGAR SEMPRE ATUALIZADO
+function carregarDados() {
+    if (fs.existsSync('dados.json')) {
+        return JSON.parse(fs.readFileSync('dados.json'));
+    }
+    return {};
+}
+
 // 🔢 Gerar nome único
 function gerarNomeUnico(nomeBase) {
     const numero = Math.floor(Math.random() * 900) + 100;
@@ -169,6 +177,90 @@ Qual seu nome e sobrenome?`);
 💰 Valor: R$${valor}`);
     }
 
+// 📅 AGENDAR CONTA
+else if (texto.startsWith('agendar')) {
+
+    const partes = texto.split('|').map(p => p.trim());
+
+    const valor = parseFloat(partes[1]?.replace(',', '.'));
+    const descricao = partes[2];
+    const tipo = partes[3];
+    const data = partes[4];
+
+    // ❌ VALIDAÇÕES
+    if (!valor || isNaN(valor)) {
+        return msg.reply('❌ Valor inválido.\n\nEx: agendar | 50 | Netflix | fixa | 20/03');
+    }
+
+    if (!descricao) {
+        return msg.reply('❌ Informe a descrição da conta');
+    }
+
+    if (!data || !data.includes('/')) {
+        return msg.reply('❌ Data inválida. Use: 20/03');
+    }
+
+    // 📂 TIPO PADRÃO
+    let tipoFinal = 'avulsa';
+    if (tipo && tipo.toLowerCase() === 'fixa') {
+        tipoFinal = 'fixa';
+    }
+
+    // 🚫 EVITAR DUPLICIDADE
+    const jaExiste = user.contas.some(c => 
+        c.descricao === descricao &&
+        c.data === data &&
+        c.valor === valor
+    );
+
+    if (jaExiste) {
+        return msg.reply('⚠️ Essa conta já foi cadastrada.');
+    }
+
+    // 💾 SALVAR
+    user.contas.push({
+    valor,
+    descricao,
+    tipo: tipoFinal,
+    data,
+    pago: false,
+    notificado: false // 🔥 NECESSÁRIO
+});
+    });
+
+    // 📅 ORDENAR POR DATA
+    user.contas.sort((a, b) => {
+        const [d1, m1] = a.data.split('/');
+        const [d2, m2] = b.data.split('/');
+        return new Date(2025, m1-1, d1) - new Date(2025, m2-1, d2);
+    });
+
+    salvarDados();
+
+    // 📆 VERIFICAR SE É HOJE
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const hojeFormatado = `${dia}/${mes}`;
+
+    let alerta = '';
+    if (data === hojeFormatado) {
+        alerta = '\n⚠️ Essa conta vence HOJE!';
+    }
+
+    // 💬 RESPOSTA PROFISSIONAL
+    return msg.reply(`📅 *Conta agendada com sucesso!*
+
+👤 ${user.nome}
+
+📌 ${descricao}
+💰 R$${valor.toFixed(2).replace('.', ',')}
+📅 ${data}
+📂 Tipo: ${tipoFinal}${alerta}
+
+💡 Use *dashboard* para acompanhar`);
+}
+
     // 📊 RELATÓRIO
     else if (texto === 'relatorio') {
 
@@ -269,5 +361,71 @@ R$${saldo.toFixed(2).replace('.', ',')}`);
     }
 
 });
+
+// 🔔 LEMBRETES + CONFIRMAÇÃO AUTOMÁTICA
+setInterval(() => {
+
+    let dados = carregarDados(); // 🔥 sempre atualiza
+
+    const agora = new Date();
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const minuto = String(agora.getMinutes()).padStart(2, '0');
+
+    const horaAtual = `${hora}:${minuto}`;
+    const horarios = ['07:00', '13:00', '19:00'];
+
+    if (!horarios.includes(horaAtual)) return;
+
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const hoje = `${dia}/${mes}`;
+
+    for (let numero in dados) {
+
+        const user = dados[numero];
+        if (!user.contas) continue;
+
+        // 🔔 LEMBRETE
+        const contasPendentes = user.contas.filter(c =>
+            !c.pago && c.data === hoje
+        );
+
+        if (contasPendentes.length > 0) {
+
+            let mensagem = `🔔 *Lembrete de contas*\n\n`;
+
+            contasPendentes.forEach(c => {
+                mensagem += `📌 ${c.descricao}\n💰 R$${c.valor}\n📅 ${c.data}\n\n`;
+            });
+
+            mensagem += '👉 Responda com "✅" para pagar';
+
+            client.sendMessage(numero, mensagem);
+        }
+
+        // ✅ CONFIRMA PAGAMENTO AUTOMÁTICO
+        user.contas.forEach(c => {
+
+            if (c.pago && !c.notificado) {
+
+                client.sendMessage(numero,
+`✅ *Pagamento confirmado!*
+
+📌 ${c.descricao}
+💰 R$${c.valor.toFixed(2).replace('.', ',')}
+
+Seu controle financeiro está atualizado 💰`
+                );
+
+                c.notificado = true;
+            }
+
+        });
+    }
+
+    // 💾 SALVA ALTERAÇÕES (IMPORTANTÍSSIMO)
+    fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+
+}, 60000);
 
 client.initialize();
