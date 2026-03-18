@@ -222,26 +222,6 @@ app.post('/nova-senha', async (req, res) => {
     res.redirect(`/user/${numero.replace('@c.us','')}`);
 });
 
-// 📊 DASHBOARD
-app.get('/user/:numero', (req, res) => {
-
-    const numero = req.params.numero + '@c.us';
-
-    if (!req.session.usuario || req.session.usuario !== numero) {
-        return res.redirect(`/login/${req.params.numero}`);
-    }
-
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
-    const user = dados[numero];
-
-    const despesas = Array.isArray(user.despesas) ? user.despesas : [];
-    const contas = Array.isArray(user.contas) ? user.contas : [];
-
-    const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0);
-    const saldo = user.receitas - totalDespesas;
-
-    const formatar = v => v.toFixed(2).replace('.', ',');
-
 // ✅ MARCAR CONTA COMO PAGA
 app.get('/pagar/:numero/:index', (req, res) => {
 
@@ -260,6 +240,50 @@ app.get('/pagar/:numero/:index', (req, res) => {
 
     res.redirect(`/user/${req.params.numero}`);
 });
+
+// 📊 DASHBOARD
+app.get('/user/:numero', (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    if (!req.session.usuario || req.session.usuario !== numero) {
+        return res.redirect(`/login/${req.params.numero}`);
+    }
+
+    let dados = JSON.parse(fs.readFileSync('dados.json'));
+    const user = dados[numero];
+
+    const despesas = Array.isArray(user.despesas) ? user.despesas : [];
+    const contas = Array.isArray(user.contas) ? user.contas : [];
+
+    const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0);
+});
+
+// 📊 AGRUPAR POR CATEGORIA
+const categorias = {};
+
+despesas.forEach(d => {
+    const cat = d.categoria || 'Outros';
+
+    if (!categorias[cat]) {
+        categorias[cat] = 0;
+    }
+
+    categorias[cat] += d.valor || 0;
+});
+
+const labelsCategorias = Object.keys(categorias);
+const valoresCategorias = Object.values(categorias);
+    
+const totalReceitas = Array.isArray(user.receitas)
+    ? user.receitas.reduce((s, r) => s + (r.valor || 0), 0)
+    : user.receitas || 0;
+
+const saldo = totalReceitas - totalDespesas;
+
+    const formatar = v => v.toFixed(2).replace('.', ',');
+});
+
 
 // 📅 GERAR HTML DAS CONTAS
 let contasHTML = '';
@@ -331,7 +355,7 @@ if (contas.length === 0) {
     <div style="display:flex;gap:10px;margin-bottom:15px;">
         <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
             <h4>Receitas</h4>
-            <p>R$ ${formatar(user.receitas)}</p>
+            <p>R$ ${formatar(totalReceitas)}</p>
         </div>
 
         <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
@@ -340,16 +364,27 @@ if (contas.length === 0) {
         </div>
     </div>
 
-    <!-- 📊 GRÁFICO -->
-    <div style="
-        background:#1e293b;
-        padding:20px;
-        border-radius:15px;
-        margin-bottom:20px;
-    ">
-        <h3>📊 Visão Financeira</h3>
-        <canvas id="grafico"></canvas>
-    </div>
+    <!-- 📊 GRÁFICO PRINCIPAL -->
+<div style="
+    background:#1e293b;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+">
+    <h3>📊 Visão Financeira</h3>
+    <canvas id="grafico"></canvas>
+</div>
+
+<!-- 📊 CATEGORIAS -->
+<div style="
+    background:#1e293b;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+">
+    <h3>📂 Gastos por Categoria</h3>
+    <canvas id="graficoCategorias"></canvas>
+</div>
 
     <!-- 📅 CONTAS -->
     <div style="
@@ -393,6 +428,27 @@ if (contas.length === 0) {
             }
         }
     });
+
+    new Chart(document.getElementById('graficoCategorias'), {
+     type: 'bar',
+     data: {
+        labels: ${JSON.stringify(labelsCategorias)},
+        datasets: [{
+            data: ${JSON.stringify(valoresCategorias)},
+            backgroundColor: '#ef4444'
+        }]
+    },
+    options: {
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: { ticks: { color: '#fff' }},
+            y: { ticks: { color: '#fff' }}
+        }
+    }
+});
+
 </script>
 
     </body>

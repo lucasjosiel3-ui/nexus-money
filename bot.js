@@ -143,7 +143,23 @@ Qual seu nome e sobrenome?`);
     const partes = texto.split('|').map(p => p.trim());
     const valor = parseFloat(partes[1].replace(',', '.'));
 
-    user.receitas += valor;
+    // 📅 DATA DE HOJE
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const hojeFormatado = `${dia}/${mes}`;
+
+    if (!Array.isArray(user.receitas)) {
+        user.receitas = [];
+    }
+
+    user.receitas.push({
+        valor,
+        descricao: partes[2],
+        fonte: partes[3],
+        data: partes[4] || hojeFormatado // 🔥 AQUI
+    });
+
     salvarDados();
 
     msg.reply(`💰 *Receita registrada!*
@@ -164,7 +180,7 @@ Qual seu nome e sobrenome?`);
         valor,
         descricao: partes[2],
         categoria: partes[3],
-        data: partes[4]
+        data: partes[4] || hojeFormatado
     });
 
     salvarDados();
@@ -333,8 +349,81 @@ await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-co
 return msg.reply(mensagem);
 }
 
+// 📊 RESUMO DIÁRIO AUTOMÁTICO
+setInterval(() => {
+
+    let dados = carregarDados();
+
+    const agora = new Date();
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const minuto = String(agora.getMinutes()).padStart(2, '0');
+
+    const horaAtual = `${hora}:${minuto}`;
+
+    // ⏰ HORÁRIO DO RESUMO
+    if (horaAtual !== '21:00') return;
+
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const hoje = `${dia}/${mes}`;
+
+    for (let numero in dados) {
+
+        const user = dados[numero];
+
+        const receitasHoje = user.receitas || 0;
+
+        const despesasHoje = (user.despesas || []).filter(d => d.data === hoje);
+
+        const totalDespesas = despesasHoje.reduce((s, d) => s + d.valor, 0);
+
+        const saldo = receitasHoje - totalDespesas;
+
+        if (receitasHoje === 0 && totalDespesas === 0) continue;
+
+        // 🧠 MAIOR GASTO
+        let maior = despesasHoje.sort((a, b) => b.valor - a.valor)[0];
+
+        // 📊 PORCENTAGEM
+        let porcentagem = receitasHoje > 0
+            ? Math.round((totalDespesas / receitasHoje) * 100)
+            : 0;
+
+        // 💡 DICA INTELIGENTE
+        let dica = '';
+
+        if (porcentagem > 80) {
+            dica = '⚠️ Você gastou quase toda sua renda hoje.';
+        } else if (porcentagem > 50) {
+            dica = '⚠️ Fique atento aos seus gastos.';
+        } else {
+            dica = '✅ Controle financeiro saudável hoje!';
+        }
+
+        // 💬 MENSAGEM
+        let mensagem = `📊 *Resumo do seu dia*
+
+👤 ${user.nome}
+
+💰 Receitas: R$${receitasHoje.toFixed(2).replace('.', ',')}
+💸 Despesas: R$${totalDespesas.toFixed(2).replace('.', ',')}
+📈 Saldo: R$${saldo.toFixed(2).replace('.', ',')}
+
+📊 Você gastou ${porcentagem}% da sua renda
+
+📌 Maior gasto: ${maior?.descricao || '---'} (R$${maior?.valor || 0})
+
+${dica}
+
+💡 Use *dashboard* para ver detalhes completos`;
+
+        client.sendMessage(numero, mensagem);
+    }
+
+}, 60000);
+
 // 🌐 DASHBOARD
-else if (texto === 'dashboard') {
+ if (texto === 'dashboard') {
 
     const numeroLimpo = numero.replace('@c.us', '');
 
