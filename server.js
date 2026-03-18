@@ -208,37 +208,122 @@ app.get('/user/:numero', (req, res) => {
     const user = dados[numero];
 
     const despesas = Array.isArray(user.despesas) ? user.despesas : [];
+    const contas = Array.isArray(user.contas) ? user.contas : [];
 
     const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0);
     const saldo = user.receitas - totalDespesas;
 
     const formatar = v => v.toFixed(2).replace('.', ',');
 
+// 📅 GERAR HTML DAS CONTAS
+let contasHTML = '';
+
+if (contas.length === 0) {
+    contasHTML = '<p>Nenhuma conta agendada.</p>';
+} else {
+    contas.forEach(c => {
+        contasHTML += `
+            <div style="
+                background:#020617;
+                padding:10px;
+                border-radius:10px;
+                margin-bottom:10px;
+            ">
+                <strong>${c.descricao || 'Conta'}</strong><br>
+                📅 ${c.data || '---'}<br>
+                💰 R$ ${formatar(c.valor || 0)}
+            </div>
+        `;
+    });
+}
     res.send(`
-    <html>
-    <head>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
-    <body style="background:#020617;color:white;font-family:Arial;padding:20px;">
+   <html>
+<head>
+    <title>${user.nome}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
 
-        <h2>👋 ${user.nome}</h2>
+<body style="background:#020617;color:white;font-family:Arial;padding:20px;">
 
-        <p>💰 Saldo: R$ ${formatar(saldo)}</p>
-        <p>💸 Despesas: R$ ${formatar(totalDespesas)}</p>
+    <h2>👋 ${user.nome}</h2>
 
+    <div style="
+        background:linear-gradient(135deg,#22c55e,#16a34a);
+        padding:20px;
+        border-radius:15px;
+        color:black;
+        margin-bottom:15px;
+    ">
+        <h3>Saldo</h3>
+        <p style="font-size:20px;">R$ ${formatar(saldo)}</p>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:15px;">
+        <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
+            <h4>Receitas</h4>
+            <p>R$ ${formatar(user.receitas)}</p>
+        </div>
+
+        <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
+            <h4>Despesas</h4>
+            <p>R$ ${formatar(totalDespesas)}</p>
+        </div>
+    </div>
+
+    <!-- 📊 GRÁFICO -->
+    <div style="
+        background:#1e293b;
+        padding:20px;
+        border-radius:15px;
+        margin-bottom:20px;
+    ">
+        <h3>📊 Visão Financeira</h3>
         <canvas id="grafico"></canvas>
+    </div>
 
-        <script>
-            new Chart(document.getElementById('grafico'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Receitas', 'Despesas'],
-                    datasets: [{
-                        data: [${user.receitas}, ${totalDespesas}]
-                    }]
+    <!-- 📅 CONTAS -->
+    <div style="
+        background:#1e293b;
+        padding:20px;
+        border-radius:15px;
+    ">
+        <h3>📅 Contas Agendadas</h3>
+        ${contasHTML}
+    </div>
+
+<script>
+    new Chart(document.getElementById('grafico'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Receitas', 'Despesas'],
+            datasets: [{
+                data: [${user.receitas}, ${totalDespesas}],
+                backgroundColor: ['#22c55e','#ef4444'],
+                borderWidth: 0,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let v = context.raw;
+                            return 'R$ ' + v.toFixed(2).replace('.', ',');
+                        }
+                    }
                 }
-            });
-        </script>
+            }
+        }
+    });
+</script>
 
     </body>
     </html>
