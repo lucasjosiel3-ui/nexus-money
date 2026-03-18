@@ -152,21 +152,7 @@
     "nome": "josiel476",
     "aguardandoNome": false,
     "receitas": 3000,
-    "despesas": [
-      {
-        "valor": 250,
-        "descricao": "jordan",
-        "categoria": "fraldas",
-        "data": "06/05"
-      },
-      {
-        "valor": 250,
-        "descricao": "jordan",
-        "categoria": "fraldas",
-        "data": "06/05"
-      }
-    ],
-    "contas": [],
-    "senhaTemp": "6ogetm"
+    "despesas": [],
+    "contas": []
   }
 }

@@ -47,6 +47,21 @@ app.get('/api/criar-usuario/:numero/:nome', (req, res) => {
     res.send({ status: 'ok' });
 });
 
+// 🧹 API DELETAR USUÁRIO
+app.get('/api/deletar-usuario/:numero', (req, res) => {
+
+    let dados = JSON.parse(fs.readFileSync('dados.json'));
+
+    const numero = req.params.numero + '@c.us';
+
+    if (dados[numero]) {
+        delete dados[numero];
+        fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+    }
+
+    res.send({ status: 'deletado' });
+});
+
 // 🏠 HOME
 app.get('/', (req, res) => {
     res.send(`

@@ -51,7 +51,7 @@ client.on('ready', () => {
     console.log('Bot conectado!');
 });
 
-client.on('message', msg => {
+client.on('message', async msg => {
 
     const numero = msg.from;
     const texto = msg.body.toLowerCase().trim();
@@ -78,32 +78,48 @@ Qual seu nome?`);
         const nomeFinal = gerarNomeUnico(nomeBase);
 
         user.nome = nomeFinal;
-        user.aguardandoNome = false;
+	user.aguardandoNome = false;
 
-        salvarDados();
+	salvarDados();
 
-        return msg.reply(`✅ Cadastro concluído!
+	// 🚀 CRIA USUÁRIO NO SERVIDOR
+	const numeroLimpo = numero.replace('@c.us', '');
 
-Bem-vindo, *${nomeFinal}*!`);
+await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/${nomeFinal}`);
+
+return msg.reply(`✅ Cadastro concluído!
+
+Bem-vindo, *${nomeFinal}*! 👋
+
+🌐 Acesse seu painel:
+https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
     }
 
     // 🧹 CONFIRMAR RESET
     if (texto === 'confirmar' && confirmacoes[numero]) {
 
-        dados[numero] = {
-            nome: user.nome,
-            aguardandoNome: false,
-            receitas: 0,
-            despesas: [],
-            contas: []
-        };
+    const numeroLimpo = numero.replace('@c.us', '');
 
-        salvarDados();
-        delete confirmacoes[numero];
+    // 🧹 APAGA NO SERVIDOR
+    await fetch(`https://nexus-money-production-39d6.up.railway.app/api/deletar-usuario/${numeroLimpo}`);
 
-        return msg.reply(`🧹 *Dados apagados com sucesso!*
+    // 🧹 RESET LOCAL
+    dados[numero] = {
+        nome: null,
+        aguardandoNome: true,
+        receitas: 0,
+        despesas: [],
+        contas: []
+    };
 
-Digite *dashboard* para acessar novamente.`);
+    salvarDados();
+    delete confirmacoes[numero];
+
+    return msg.reply(`👋 Olá! Eu sou o *Nexus Money* 💰
+
+Vamos começar do zero.
+
+Qual seu nome e sobrenome?`);
     }
 
     // 💰 RECEITA
