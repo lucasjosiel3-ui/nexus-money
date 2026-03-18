@@ -257,7 +257,7 @@ app.get('/user/:numero', (req, res) => {
     const contas = Array.isArray(user.contas) ? user.contas : [];
 
     const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0);
-});
+
 
 // 📊 AGRUPAR POR CATEGORIA
 const categorias = {};
@@ -282,7 +282,6 @@ const totalReceitas = Array.isArray(user.receitas)
 const saldo = totalReceitas - totalDespesas;
 
     const formatar = v => v.toFixed(2).replace('.', ',');
-});
 
 
 // 📅 GERAR HTML DAS CONTAS
