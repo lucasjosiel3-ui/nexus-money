@@ -26,12 +26,13 @@ function gerarSenhaTemp() {
 }
 
 // 🚀 API CRIAR USUÁRIO
-app.get('/api/criar-usuario/:numero/:nome', (req, res) => {
+app.get('/api/criar-usuario/:numero/:nome/:senha', (req, res) => {
 
     let dados = JSON.parse(fs.readFileSync('dados.json'));
 
     const numero = req.params.numero + '@c.us';
     const nome = req.params.nome;
+    const senha = req.params.senha;
 
     if (!dados[numero]) {
         dados[numero] = {
@@ -39,7 +40,8 @@ app.get('/api/criar-usuario/:numero/:nome', (req, res) => {
             aguardandoNome: false,
             receitas: 0,
             despesas: [],
-            contas: []
+            contas: [],
+            senhaTemp: senha // 🔥 SALVA SENHA
         };
 
         fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));

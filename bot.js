@@ -13,6 +13,11 @@ if (fs.existsSync('dados.json')) {
     dados = JSON.parse(fs.readFileSync('dados.json'));
 }
 
+// 🔑 GERAR SENHA TEMP
+function gerarSenhaTemp() {
+    return Math.random().toString(36).slice(-6);
+}
+
 // 💾 Salvar
 function salvarDados() {
     fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
@@ -76,6 +81,7 @@ Qual seu nome?`);
         }
 
         const nomeFinal = gerarNomeUnico(nomeBase);
+	const senhaTemp = gerarSenhaTemp();
 
         user.nome = nomeFinal;
 	user.aguardandoNome = false;
@@ -85,11 +91,12 @@ Qual seu nome?`);
 	// 🚀 CRIA USUÁRIO NO SERVIDOR
 	const numeroLimpo = numero.replace('@c.us', '');
 
-await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/${nomeFinal}`);
+await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/${nomeFinal}/${senhaTemp}`);
 
 return msg.reply(`✅ Cadastro concluído!
 
-Bem-vindo, *${nomeFinal}*! 👋
+👤 Usuário: *${nomeFinal}*
+🔑 Senha: *${senhaTemp}*
 
 🌐 Acesse seu painel:
 https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
