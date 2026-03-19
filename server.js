@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 // 👇 BANCO DE DADOS
 const mongoose = require('mongoose');
 
-mongoose.connect('SUA_URL_MONGODB');
+mongoose.connect(process.env.MONGO_URL);
 
 // 👇 MODEL DO USUÁRIO
 const User = mongoose.model('User', {
