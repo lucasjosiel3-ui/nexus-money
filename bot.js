@@ -29,7 +29,7 @@ client.on('message', async msg => {
 
     const numero = msg.from;
     const texto = msg.body.toLowerCase().trim();
-    const numeroLimpo = numero.replace('@c.us', '');
+    const numeroLimpo = numero.split('@')[0];
 
     let res = await fetch(`https://nexus-money-production-39d6.up.railway.app/api/buscar/${numeroLimpo}`);
     let user = await res.json();
