@@ -30,20 +30,18 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// 🚀 API CRIAR / ATUALIZAR USUÁRIO (FIX FINAL)
+// 🚀 API CRIAR / ATUALIZAR USUÁRIO
 app.get('/api/criar-usuario/:numero/:nome/:senha', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
     let nome = req.params.nome;
     let senha = req.params.senha;
 
-    // 🔥 TRATAR NULL
     if (nome === '_' || nome === 'null') nome = null;
     if (senha === '_' || senha === 'null') senha = null;
 
     let user = await User.findOne({ numero });
 
-    // 👤 NÃO EXISTE → CRIA
     if (!user) {
         user = await User.create({
             numero,
@@ -57,7 +55,6 @@ app.get('/api/criar-usuario/:numero/:nome/:senha', async (req, res) => {
         return res.send({ status: 'criado' });
     }
 
-    // 🔥 EXISTE → ATUALIZA
     if (nome) user.nome = nome;
     if (senha) user.senhaTemp = senha;
 
@@ -79,7 +76,7 @@ app.get('/api/buscar/:numero', async (req, res) => {
     }
 });
 
-// 🧹 DELETAR
+// 🧹 DELETAR USUÁRIO
 app.get('/api/deletar-usuario/:numero', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
@@ -89,7 +86,35 @@ app.get('/api/deletar-usuario/:numero', async (req, res) => {
     res.send({ status: 'deletado' });
 });
 
-// 🔐 LOGIN (CORRIGIDO)
+// 🔐 LOGIN PELO LINK (🔥 ESSA ERA A QUE FALTAVA)
+app.get('/login/:numero', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    const user = await User.findOne({ numero });
+
+    if (!user) return res.send('Usuário não encontrado');
+
+    res.redirect(`/login-form/${req.params.numero}`);
+});
+
+// 🔐 FORM LOGIN
+app.get('/login-form/:numero', (req, res) => {
+    res.send(`
+    <html>
+    <body style="background:#0f172a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;">
+        <form method="POST" action="/login" style="background:#1e293b;padding:30px;border-radius:10px;">
+            <h2>Login</h2>
+            <input type="hidden" name="numero" value="${req.params.numero}@c.us">
+            <input type="password" name="senha" placeholder="Senha" required>
+            <button>Entrar</button>
+        </form>
+    </body>
+    </html>
+    `);
+});
+
+// 🔐 VALIDAR LOGIN
 app.post('/login', async (req, res) => {
 
     const { numero, senha } = req.body;
@@ -117,6 +142,40 @@ app.post('/login', async (req, res) => {
     return res.send('❌ Senha inválida');
 });
 
+// 🔐 NOVA SENHA
+app.get('/nova-senha/:numero', (req, res) => {
+    res.send(`
+    <html>
+    <body style="background:#0f172a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;">
+        <form method="POST" action="/nova-senha" style="background:#1e293b;padding:30px;border-radius:10px;">
+            <h2>Criar nova senha</h2>
+            <input type="hidden" name="numero" value="${req.params.numero}@c.us">
+            <input type="password" name="senha" required>
+            <button>Salvar</button>
+        </form>
+    </body>
+    </html>
+    `);
+});
+
+app.post('/nova-senha', async (req, res) => {
+
+    const { numero, senha } = req.body;
+
+    const hash = await bcrypt.hash(senha, 10);
+
+    await User.updateOne(
+        { numero },
+        {
+            senha: hash,
+            senhaTemp: null
+        }
+    );
+
+    res.redirect(`/user/${numero.replace('@c.us','')}`);
+});
+
+// 🚀 SERVIDOR
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });
