@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 // 👇 BANCO DE DADOS
 const mongoose = require('mongoose');
 
-mongoose.connect(process.env.MONGO_URL);
+mongoose.connect(process.env.URL_MONGO);
 
 // 👇 MODEL DO USUÁRIO
 const User = mongoose.model('User', {
@@ -91,6 +91,21 @@ app.get('/api/deletar-usuario/:numero', async (req, res) => {
     await User.deleteOne({ numero });
 
     res.send({ status: 'deletado' });
+});
+
+// 🔍 API BUSCAR USUÁRIO (BOT)
+app.get('/api/buscar/:numero', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    try {
+        const user = await User.findOne({ numero });
+
+        res.json(user || null);
+    } catch (err) {
+        console.log('Erro ao buscar usuário:', err);
+        res.status(500).json({ erro: 'Erro interno' });
+    }
 });
 
 // 🏠 HOME
