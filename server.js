@@ -1,8 +1,23 @@
 const express = require('express');
-const fs = require('fs');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const fetch = require('node-fetch');
+
+// 👇 BANCO DE DADOS
+const mongoose = require('mongoose');
+
+mongoose.connect('SUA_URL_MONGODB');
+
+// 👇 MODEL DO USUÁRIO
+const User = mongoose.model('User', {
+    numero: String,
+    nome: String,
+    receitas: Number,
+    despesas: Array,
+    contas: Array,
+    senha: String,
+    senhaTemp: String
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,55 +30,46 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// 🔥 GARANTE QUE O ARQUIVO EXISTE
-if (!fs.existsSync('dados.json')) {
-    fs.writeFileSync('dados.json', JSON.stringify({}, null, 2));
-}
-
 // 🔑 GERAR SENHA TEMP
 function gerarSenhaTemp() {
     return Math.random().toString(36).slice(-6);
 }
 
 // 🚀 API CRIAR USUÁRIO
-app.get('/api/criar-usuario/:numero/:nome/:senha', (req, res) => {
-
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
+app.get('/api/criar-usuario/:numero/:nome/:senha', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
     const nome = req.params.nome;
     const senha = req.params.senha;
 
-    if (!dados[numero]) {
-        dados[numero] = {
-            nome: nome,
-            aguardandoNome: false,
+    const existe = await User.findOne({ numero });
+
+    if (!existe) {
+        await User.create({
+            numero,
+            nome,
             receitas: 0,
             despesas: [],
             contas: [],
-            senhaTemp: senha // 🔥 SALVA SENHA
-        };
-
-        fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+            senhaTemp: senha
+        });
     }
 
     res.send({ status: 'ok' });
 });
 
-// 🚀 API ADICIONAR CONTA
-app.get('/api/adicionar-conta/:numero/:descricao/:valor/:data/:tipo', (req, res) => {
-
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
+// 🚀 API ADICIONAR CONTA (MONGO)
+app.get('/api/adicionar-conta/:numero/:descricao/:valor/:data/:tipo', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
 
-    if (!dados[numero]) return res.send('Usuário não encontrado');
+    const user = await User.findOne({ numero });
 
-    if (!dados[numero].contas) {
-        dados[numero].contas = [];
-    }
+    if (!user) return res.send('Usuário não encontrado');
 
-    dados[numero].contas.push({
+    if (!user.contas) user.contas = [];
+
+    user.contas.push({
         descricao: req.params.descricao,
         valor: parseFloat(req.params.valor),
         data: req.params.data,
@@ -72,22 +78,17 @@ app.get('/api/adicionar-conta/:numero/:descricao/:valor/:data/:tipo', (req, res)
         notificado: false
     });
 
-    fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+    await user.save();
 
     res.send({ status: 'ok' });
 });
 
 // 🧹 API DELETAR USUÁRIO
-app.get('/api/deletar-usuario/:numero', (req, res) => {
-
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
+app.get('/api/deletar-usuario/:numero', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
 
-    if (dados[numero]) {
-        delete dados[numero];
-        fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
-    }
+    await User.deleteOne({ numero });
 
     res.send({ status: 'deletado' });
 });
@@ -115,12 +116,10 @@ app.get('/', (req, res) => {
 });
 
 // 🔐 LOGIN
-app.get('/login/:numero', (req, res) => {
-
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
+app.get('/login/:numero', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
-    const user = dados[numero];
+    const user = await User.findOne({ numero });
 
     if (!user) return res.send('Usuário não encontrado');
 
@@ -128,8 +127,7 @@ app.get('/login/:numero', (req, res) => {
 
         const senhaTemp = gerarSenhaTemp();
         user.senhaTemp = senhaTemp;
-
-        fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+        await user.save();
 
         return res.send(`
         <html>
@@ -169,10 +167,9 @@ app.get('/login-form/:numero', (req, res) => {
 // 🔐 VALIDAR LOGIN
 app.post('/login', async (req, res) => {
 
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
-
     const { numero, senha } = req.body;
-    const user = dados[numero];
+
+    const user = await User.findOne({ numero });
 
     if (!user) return res.send('Usuário não encontrado');
 
@@ -208,41 +205,42 @@ app.get('/nova-senha/:numero', (req, res) => {
 
 app.post('/nova-senha', async (req, res) => {
 
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
-
     const { numero, senha } = req.body;
 
     const hash = await bcrypt.hash(senha, 10);
 
-    dados[numero].senha = hash;
-    delete dados[numero].senhaTemp;
-
-    fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+    await User.updateOne(
+        { numero },
+        {
+            senha: hash,
+            senhaTemp: null
+        }
+    );
 
     res.redirect(`/user/${numero.replace('@c.us','')}`);
 });
 
-// ✅ MARCAR CONTA COMO PAGA
-app.get('/pagar/:numero/:index', (req, res) => {
-
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
+// ✅ MARCAR CONTA COMO PAGA (MONGO)
+app.get('/pagar/:numero/:index', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
     const index = parseInt(req.params.index);
 
-    if (!dados[numero]) return res.send('Usuário não encontrado');
+    const user = await User.findOne({ numero });
 
-    if (dados[numero].contas && dados[numero].contas[index]) {
-        dados[numero].contas[index].pago = true;
+    if (!user) return res.send('Usuário não encontrado');
+
+    if (user.contas[index]) {
+        user.contas[index].pago = true;
     }
 
-    fs.writeFileSync('dados.json', JSON.stringify(dados, null, 2));
+    await user.save();
 
     res.redirect(`/user/${req.params.numero}`);
 });
 
 // 📊 DASHBOARD
-app.get('/user/:numero', (req, res) => {
+app.get('/user/:numero', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
 
@@ -250,212 +248,58 @@ app.get('/user/:numero', (req, res) => {
         return res.redirect(`/login/${req.params.numero}`);
     }
 
-    let dados = JSON.parse(fs.readFileSync('dados.json'));
-    const user = dados[numero];
+    const user = await User.findOne({ numero });
 
     const despesas = Array.isArray(user.despesas) ? user.despesas : [];
     const contas = Array.isArray(user.contas) ? user.contas : [];
 
     const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0);
 
+    const categorias = {};
 
-// 📊 AGRUPAR POR CATEGORIA
-const categorias = {};
+    despesas.forEach(d => {
+        const cat = d.categoria || 'Outros';
+        if (!categorias[cat]) categorias[cat] = 0;
+        categorias[cat] += d.valor || 0;
+    });
 
-despesas.forEach(d => {
-    const cat = d.categoria || 'Outros';
+    const labelsCategorias = Object.keys(categorias);
+    const valoresCategorias = Object.values(categorias);
 
-    if (!categorias[cat]) {
-        categorias[cat] = 0;
-    }
-
-    categorias[cat] += d.valor || 0;
-});
-
-const labelsCategorias = Object.keys(categorias);
-const valoresCategorias = Object.values(categorias);
-    
-const totalReceitas = Array.isArray(user.receitas)
-    ? user.receitas.reduce((s, r) => s + (r.valor || 0), 0)
-    : user.receitas || 0;
-
-const saldo = totalReceitas - totalDespesas;
+    const totalReceitas = user.receitas || 0;
+    const saldo = totalReceitas - totalDespesas;
 
     const formatar = v => v.toFixed(2).replace('.', ',');
 
+    let contasHTML = '';
 
-// 📅 GERAR HTML DAS CONTAS
-let contasHTML = '';
+    if (contas.length === 0) {
+        contasHTML = '<p>Nenhuma conta agendada.</p>';
+    } else {
+        contas.forEach((c, i) => {
 
-if (contas.length === 0) {
-    contasHTML = '<p>Nenhuma conta agendada.</p>';
-} else {
-    contas.forEach((c, i) => {
+            const status = c.pago ? '✅ Pago' : '⏳ Pendente';
 
-        const status = c.pago 
-            ? '✅ Pago'
-            : '⏳ Pendente';
-
-        const botao = c.pago
-            ? ''
-            : `<a href="/pagar/${req.params.numero}/${i}">
-                <button style="
-                    margin-top:8px;
-                    padding:5px 10px;
-                    background:#22c55e;
-                    border:none;
-                    border-radius:5px;
-                    cursor:pointer;
-                ">
+            const botao = c.pago ? '' : `
+            <a href="/pagar/${req.params.numero}/${i}">
+                <button style="margin-top:8px;padding:5px 10px;background:#22c55e;border:none;border-radius:5px;cursor:pointer;">
                     Pagar
                 </button>
-               </a>`;
+            </a>`;
 
-        contasHTML += `
-            <div style="
-                background:#020617;
-                padding:10px;
-                border-radius:10px;
-                margin-bottom:10px;
-                border-left:5px solid ${c.pago ? '#22c55e' : '#ef4444'};
-            ">
-                <strong>${c.descricao || 'Conta'}</strong><br>
-                📅 ${c.data || '---'}<br>
-                💰 R$ ${formatar(c.valor || 0)}<br>
-                ${status}
-                <br>
-                ${botao}
-            </div>
-        `;
-    });
-}
-    res.send(`
-   <html>
-<head>
-    <title>${user.nome}</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-
-<body style="background:#020617;color:white;font-family:Arial;padding:20px;">
-
-    <h2>👋 ${user.nome}</h2>
-
-    <div style="
-        background:linear-gradient(135deg,#22c55e,#16a34a);
-        padding:20px;
-        border-radius:15px;
-        color:black;
-        margin-bottom:15px;
-    ">
-        <h3>Saldo</h3>
-        <p style="font-size:20px;">R$ ${formatar(saldo)}</p>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-bottom:15px;">
-        <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
-            <h4>Receitas</h4>
-            <p>R$ ${formatar(totalReceitas)}</p>
-        </div>
-
-        <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
-            <h4>Despesas</h4>
-            <p>R$ ${formatar(totalDespesas)}</p>
-        </div>
-    </div>
-
-    <!-- 📊 GRÁFICO PRINCIPAL -->
-<div style="
-    background:#1e293b;
-    padding:20px;
-    border-radius:15px;
-    margin-bottom:20px;
-">
-    <h3>📊 Visão Financeira</h3>
-    <canvas id="grafico"></canvas>
-</div>
-
-<!-- 📊 CATEGORIAS -->
-<div style="
-    background:#1e293b;
-    padding:20px;
-    border-radius:15px;
-    margin-bottom:20px;
-">
-    <h3>📂 Gastos por Categoria</h3>
-    <canvas id="graficoCategorias"></canvas>
-</div>
-
-    <!-- 📅 CONTAS -->
-    <div style="
-        background:#1e293b;
-        padding:20px;
-        border-radius:15px;
-    ">
-        <h3>📅 Contas Agendadas</h3>
-        ${contasHTML}
-    </div>
-
-<script>
-    new Chart(document.getElementById('grafico'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Receitas', 'Despesas'],
-            datasets: [{
-                data: [${user.receitas}, ${totalDespesas}],
-                backgroundColor: ['#22c55e','#ef4444'],
-                borderWidth: 0,
-                hoverOffset: 15
-            }]
-        },
-        options: {
-            cutout: '70%',
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: '#fff'
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let v = context.raw;
-                            return 'R$ ' + v.toFixed(2).replace('.', ',');
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    new Chart(document.getElementById('graficoCategorias'), {
-     type: 'bar',
-     data: {
-        labels: ${JSON.stringify(labelsCategorias)},
-        datasets: [{
-            data: ${JSON.stringify(valoresCategorias)},
-            backgroundColor: '#ef4444'
-        }]
-    },
-    options: {
-        plugins: {
-            legend: { display: false }
-        },
-        scales: {
-            x: { ticks: { color: '#fff' }},
-            y: { ticks: { color: '#fff' }}
-        }
+            contasHTML += `
+            <div style="background:#020617;padding:10px;border-radius:10px;margin-bottom:10px;border-left:5px solid ${c.pago ? '#22c55e' : '#ef4444'};">
+                <strong>${c.descricao}</strong><br>
+                📅 ${c.data}<br>
+                💰 R$ ${formatar(c.valor)}<br>
+                ${status}<br>${botao}
+            </div>`;
+        });
     }
+
+    res.send(`...`);
 });
 
-</script>
-
-    </body>
-    </html>
-    `);
-});
-
-// 🚀 SERVIDOR
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });

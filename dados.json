@@ -161,6 +161,14 @@
         "data": "18/03",
         "pago": false,
         "notificado": false
+      },
+      {
+        "valor": 50,
+        "descricao": "claro",
+        "tipo": "fixa",
+        "data": "18/04",
+        "pago": false,
+        "notificado": false
       }
     ]
   }
