@@ -6,12 +6,12 @@ const client = new Client();
 
 let confirmacoes = {};
 
-// 🔑 GERAR SENHA TEMP
+// 🔑 SENHA TEMP
 function gerarSenhaTemp() {
     return Math.random().toString(36).slice(-6);
 }
 
-// 🔢 Gerar nome único
+// 🔢 NOME
 function gerarNomeUnico(nomeBase) {
     const numero = Math.floor(Math.random() * 900) + 100;
     return `${nomeBase}${numero}`;
@@ -31,26 +31,34 @@ client.on('message', async msg => {
     const texto = msg.body.toLowerCase().trim();
     const numeroLimpo = numero.replace('@c.us', '');
 
-    // 🔥 BUSCA USUÁRIO NO SERVER
     let res = await fetch(`https://nexus-money-production-39d6.up.railway.app/api/buscar/${numeroLimpo}`);
     let user = await res.json();
 
-    // 👤 PRIMEIRO CONTATO → CRIA USUÁRIO VAZIO
+    // 👤 PRIMEIRO CONTATO
     if (!user) {
 
-        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/null/null`);
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/_/_`);
 
         return msg.reply(`👋 Olá! Eu sou o *Nexus Money* 💰
 
 Qual seu nome?`);
     }
 
-    // 👉 SE NÃO TEM NOME → FINALIZA CADASTRO
-    if (!user.nome || user.nome === 'null') {
+    // 👤 CADASTRO
+    if (!user.nome) {
+
+        // 🚫 BLOQUEAR COMANDOS
+        if (
+            texto.startsWith('agendar') ||
+            texto.startsWith('receita') ||
+            texto.startsWith('despesa')
+        ) {
+            return msg.reply('⚠️ Me diga seu nome primeiro 😊');
+        }
 
         const nomeBase = texto.replace(/\s+/g, '');
 
-        if (!nomeBase) {
+        if (!nomeBase || nomeBase.length < 3) {
             return msg.reply('❌ Digite um nome válido');
         }
 
@@ -61,67 +69,48 @@ Qual seu nome?`);
 
         return msg.reply(`✅ Cadastro concluído!
 
-👤 Usuário: *${nomeFinal}*
-🔑 Senha: *${senhaTemp}*
+👤 ${nomeFinal}
+🔑 Senha: ${senhaTemp}
 
-🌐 Acesse seu painel:
-https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
+🌐 https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
     }
 
     // 💰 RECEITA
     if (texto.startsWith('receita')) {
 
-        const partes = texto.split('|').map(p => p.trim());
+        const partes = texto.split('|');
         const valor = parseFloat(partes[1].replace(',', '.'));
 
         await fetch(`https://nexus-money-production-39d6.up.railway.app/api/receita/${numeroLimpo}/${valor}`);
 
-        return msg.reply(`💰 Receita registrada!`);
+        return msg.reply('💰 Receita registrada!');
     }
 
     // 💸 DESPESA
     if (texto.startsWith('despesa')) {
 
-        const partes = texto.split('|').map(p => p.trim());
+        const partes = texto.split('|');
         const valor = parseFloat(partes[1].replace(',', '.'));
         const categoria = partes[3];
 
         await fetch(`https://nexus-money-production-39d6.up.railway.app/api/despesa/${numeroLimpo}/${valor}/${categoria}`);
 
-        return msg.reply(`💸 Despesa registrada!`);
+        return msg.reply('💸 Despesa registrada!');
     }
 
-    // 📅 AGENDAR CONTA
+    // 📅 AGENDAR
     if (texto.startsWith('agendar')) {
 
-        const partes = texto.split('|').map(p => p.trim());
+        const partes = texto.split('|');
 
-        const valor = parseFloat(partes[1].replace(',', '.'));
-        const descricao = partes[2];
-        const tipo = partes[3];
-        const data = partes[4];
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${partes[2]}/${partes[1]}/${partes[4]}/${partes[3]}`);
 
-        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${descricao}/${valor}/${data}/${tipo}`);
-
-        return msg.reply(`📅 Conta agendada com sucesso!`);
+        return msg.reply('📅 Conta agendada!');
     }
 
-    // 📊 DASHBOARD
-    if (texto === 'dashboard') {
-
-        return msg.reply(`🌐 Acesse seu painel:
-
-https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
-    }
-
-    // 🧹 RESET
     if (texto === 'resetar') {
-
         confirmacoes[numero] = true;
-
-        return msg.reply(`⚠️ Tem certeza?
-
-Digite *CONFIRMAR*`);
+        return msg.reply('Digite CONFIRMAR');
     }
 
     if (texto === 'confirmar' && confirmacoes[numero]) {
@@ -130,9 +119,7 @@ Digite *CONFIRMAR*`);
 
         delete confirmacoes[numero];
 
-        return msg.reply(`👋 Reset concluído.
-
-Qual seu nome?`);
+        return msg.reply('Reset feito. Qual seu nome?');
     }
 
 });
