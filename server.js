@@ -175,12 +175,31 @@ app.post('/nova-senha', async (req, res) => {
     res.redirect(`/user/${numero.replace('@c.us','')}`);
 });
 
-// 📊 DASHBOARD
+// ✅ PAGAR CONTA
+app.get('/pagar/:numero/:index', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+    const index = parseInt(req.params.index);
+
+    const user = await User.findOne({ numero });
+
+    if (!user) return res.send('Usuário não encontrado');
+
+    if (user.contas[index]) {
+        user.contas[index].pago = true;
+    }
+
+    await user.save();
+
+    res.redirect(`/user/${req.params.numero}`);
+});
+
+// 📊 DASHBOARD COMPLETO
 app.get('/user/:numero', async (req, res) => {
 
     const numero = req.params.numero + '@c.us';
 
-    // 🔐 PROTEÇÃO DE SESSÃO
+    // 🔐 PROTEÇÃO
     if (!req.session.usuario || req.session.usuario !== numero) {
         return res.redirect(`/login/${req.params.numero}`);
     }
@@ -189,23 +208,162 @@ app.get('/user/:numero', async (req, res) => {
 
     if (!user) return res.send('Usuário não encontrado');
 
+    const despesas = Array.isArray(user.despesas) ? user.despesas : [];
+    const contas = Array.isArray(user.contas) ? user.contas : [];
+
+    // 💸 TOTAL DESPESAS
+    const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0);
+
+    // 💰 RECEITAS (caso seja número)
+    const totalReceitas = user.receitas || 0;
+
+    // 💰 SALDO
+    const saldo = totalReceitas - totalDespesas;
+
+    // 📊 AGRUPAR CATEGORIAS
+    const categorias = {};
+
+    despesas.forEach(d => {
+        const cat = d.categoria || 'Outros';
+        if (!categorias[cat]) categorias[cat] = 0;
+        categorias[cat] += d.valor || 0;
+    });
+
+    const labelsCategorias = Object.keys(categorias);
+    const valoresCategorias = Object.values(categorias);
+
+    const formatar = v => (v || 0).toFixed(2).replace('.', ',');
+
+    // 📅 CONTAS HTML
+    let contasHTML = '';
+
+    if (contas.length === 0) {
+        contasHTML = '<p>Nenhuma conta agendada.</p>';
+    } else {
+        contas.forEach((c, i) => {
+
+            const status = c.pago ? '✅ Pago' : '⏳ Pendente';
+
+            const botao = c.pago ? '' : `
+            <a href="/pagar/${req.params.numero}/${i}">
+                <button style="
+                    margin-top:8px;
+                    padding:5px 10px;
+                    background:#22c55e;
+                    border:none;
+                    border-radius:5px;
+                    cursor:pointer;
+                ">
+                    Pagar
+                </button>
+            </a>`;
+
+            contasHTML += `
+            <div style="
+                background:#020617;
+                padding:10px;
+                border-radius:10px;
+                margin-bottom:10px;
+                border-left:5px solid ${c.pago ? '#22c55e' : '#ef4444'};
+            ">
+                <strong>${c.descricao}</strong><br>
+                📅 ${c.data}<br>
+                💰 R$ ${formatar(c.valor)}<br>
+                ${status}<br>
+                ${botao}
+            </div>`;
+        });
+    }
+
     res.send(`
-    <html>
-    <body style="background:#020617;color:white;font-family:Arial;padding:20px;">
+<html>
+<head>
+    <title>${user.nome}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
 
-        <h2>👋 ${user.nome}</h2>
+<body style="background:#020617;color:white;font-family:Arial;padding:20px;">
 
-        <div style="background:#1e293b;padding:20px;border-radius:10px;">
-            <h3>Bem-vindo ao Nexus Money 💰</h3>
+<h2>👋 ${user.nome}</h2>
 
-            <p>Seu acesso está funcionando corretamente!</p>
+<!-- 💰 SALDO -->
+<div style="
+    background:linear-gradient(135deg,#22c55e,#16a34a);
+    padding:20px;
+    border-radius:15px;
+    color:black;
+    margin-bottom:15px;
+">
+    <h3>Saldo</h3>
+    <p style="font-size:20px;">R$ ${formatar(saldo)}</p>
+</div>
 
-            <p>Em breve aqui estarão seus gráficos 📊</p>
-        </div>
+<!-- 💸 RESUMO -->
+<div style="display:flex;gap:10px;margin-bottom:15px;">
+    <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
+        <h4>Receitas</h4>
+        <p>R$ ${formatar(totalReceitas)}</p>
+    </div>
 
-    </body>
-    </html>
-    `);
+    <div style="flex:1;background:#1e293b;padding:15px;border-radius:10px;">
+        <h4>Despesas</h4>
+        <p>R$ ${formatar(totalDespesas)}</p>
+    </div>
+</div>
+
+<!-- 📊 GRÁFICO PRINCIPAL -->
+<div style="background:#1e293b;padding:20px;border-radius:15px;margin-bottom:20px;">
+    <h3>📊 Visão Financeira</h3>
+    <canvas id="grafico"></canvas>
+</div>
+
+<!-- 📂 CATEGORIAS -->
+<div style="background:#1e293b;padding:20px;border-radius:15px;margin-bottom:20px;">
+    <h3>📂 Gastos por Categoria</h3>
+    <canvas id="graficoCategorias"></canvas>
+</div>
+
+<!-- 📅 CONTAS -->
+<div style="background:#1e293b;padding:20px;border-radius:15px;">
+    <h3>📅 Contas Agendadas</h3>
+    ${contasHTML}
+</div>
+
+<script>
+new Chart(document.getElementById('grafico'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Receitas', 'Despesas'],
+        datasets: [{
+            data: [${totalReceitas}, ${totalDespesas}],
+            backgroundColor: ['#22c55e','#ef4444'],
+            borderWidth: 0
+        }]
+    }
+});
+
+new Chart(document.getElementById('graficoCategorias'), {
+    type: 'bar',
+    data: {
+        labels: ${JSON.stringify(labelsCategorias)},
+        datasets: [{
+            data: ${JSON.stringify(valoresCategorias)},
+            backgroundColor: '#ef4444'
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false }},
+        scales: {
+            x: { ticks: { color: '#fff' }},
+            y: { ticks: { color: '#fff' }}
+        }
+    }
+});
+</script>
+
+</body>
+</html>
+`);
 });
 
 // 🚀 SERVIDOR
