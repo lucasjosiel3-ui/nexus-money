@@ -29,110 +29,110 @@ client.on('message', async msg => {
 
     const numero = msg.from;
     const texto = msg.body.toLowerCase().trim();
+    const numeroLimpo = numero.replace('@c.us', '');
 
-    // 👤 CADASTRO
-    if (texto !== 'dashboard' && texto !== 'saldo' && texto !== 'resetar') {
+    // 🔥 BUSCA USUÁRIO NO SERVER
+    let res = await fetch(`https://nexus-money-production-39d6.up.railway.app/api/buscar/${numeroLimpo}`);
+    let user = await res.json();
 
-        const numeroLimpo = numero.replace('@c.us', '');
+    // 👤 PRIMEIRO CONTATO → CRIA USUÁRIO VAZIO
+    if (!user) {
 
-        // 🔥 BUSCA USUÁRIO NO SERVER
-        let res = await fetch(`https://nexus-money-production-39d6.up.railway.app/api/buscar/${numeroLimpo}`);
-        let user = await res.json();
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/null/null`);
 
-        if (!user || user.aguardandoNome) {
-
-            if (!user || !user.nome) {
-                return msg.reply(`👋 Olá! Eu sou o *Nexus Money* 💰
+        return msg.reply(`👋 Olá! Eu sou o *Nexus Money* 💰
 
 Qual seu nome?`);
-            }
+    }
 
-            const nomeBase = texto.replace(/\s+/g, '');
+    // 👉 SE NÃO TEM NOME → FINALIZA CADASTRO
+    if (!user.nome || user.nome === 'null') {
 
-            if (!nomeBase) {
-                return msg.reply('❌ Digite um nome válido');
-            }
+        const nomeBase = texto.replace(/\s+/g, '');
 
-            const nomeFinal = gerarNomeUnico(nomeBase);
-            const senhaTemp = gerarSenhaTemp();
+        if (!nomeBase) {
+            return msg.reply('❌ Digite um nome válido');
+        }
 
-            await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/${nomeFinal}/${senhaTemp}`);
+        const nomeFinal = gerarNomeUnico(nomeBase);
+        const senhaTemp = gerarSenhaTemp();
 
-            return msg.reply(`✅ Cadastro concluído!
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/criar-usuario/${numeroLimpo}/${nomeFinal}/${senhaTemp}`);
+
+        return msg.reply(`✅ Cadastro concluído!
 
 👤 Usuário: *${nomeFinal}*
 🔑 Senha: *${senhaTemp}*
 
 🌐 Acesse seu painel:
 https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
-        }
+    }
 
-        // 💰 RECEITA
-        if (texto.startsWith('receita')) {
+    // 💰 RECEITA
+    if (texto.startsWith('receita')) {
 
-            const partes = texto.split('|').map(p => p.trim());
-            const valor = parseFloat(partes[1].replace(',', '.'));
+        const partes = texto.split('|').map(p => p.trim());
+        const valor = parseFloat(partes[1].replace(',', '.'));
 
-            await fetch(`https://nexus-money-production-39d6.up.railway.app/api/receita/${numeroLimpo}/${valor}`);
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/receita/${numeroLimpo}/${valor}`);
 
-            return msg.reply(`💰 Receita registrada!`);
-        }
+        return msg.reply(`💰 Receita registrada!`);
+    }
 
-        // 💸 DESPESA
-        if (texto.startsWith('despesa')) {
+    // 💸 DESPESA
+    if (texto.startsWith('despesa')) {
 
-            const partes = texto.split('|').map(p => p.trim());
-            const valor = parseFloat(partes[1].replace(',', '.'));
-            const categoria = partes[3];
+        const partes = texto.split('|').map(p => p.trim());
+        const valor = parseFloat(partes[1].replace(',', '.'));
+        const categoria = partes[3];
 
-            await fetch(`https://nexus-money-production-39d6.up.railway.app/api/despesa/${numeroLimpo}/${valor}/${categoria}`);
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/despesa/${numeroLimpo}/${valor}/${categoria}`);
 
-            return msg.reply(`💸 Despesa registrada!`);
-        }
+        return msg.reply(`💸 Despesa registrada!`);
+    }
 
-        // 📅 AGENDAR CONTA
-        if (texto.startsWith('agendar')) {
+    // 📅 AGENDAR CONTA
+    if (texto.startsWith('agendar')) {
 
-            const partes = texto.split('|').map(p => p.trim());
+        const partes = texto.split('|').map(p => p.trim());
 
-            const valor = parseFloat(partes[1].replace(',', '.'));
-            const descricao = partes[2];
-            const tipo = partes[3];
-            const data = partes[4];
+        const valor = parseFloat(partes[1].replace(',', '.'));
+        const descricao = partes[2];
+        const tipo = partes[3];
+        const data = partes[4];
 
-            await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${descricao}/${valor}/${data}/${tipo}`);
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${descricao}/${valor}/${data}/${tipo}`);
 
-            return msg.reply(`📅 Conta agendada com sucesso!`);
-        }
+        return msg.reply(`📅 Conta agendada com sucesso!`);
+    }
 
-        // 📊 DASHBOARD
-        if (texto === 'dashboard') {
+    // 📊 DASHBOARD
+    if (texto === 'dashboard') {
 
-            return msg.reply(`🌐 Acesse seu painel:
+        return msg.reply(`🌐 Acesse seu painel:
 
 https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
-        }
+    }
 
-        // 🧹 RESET
-        if (texto === 'resetar') {
+    // 🧹 RESET
+    if (texto === 'resetar') {
 
-            confirmacoes[numero] = true;
+        confirmacoes[numero] = true;
 
-            return msg.reply(`⚠️ Tem certeza?
+        return msg.reply(`⚠️ Tem certeza?
 
 Digite *CONFIRMAR*`);
-        }
+    }
 
-        if (texto === 'confirmar' && confirmacoes[numero]) {
+    if (texto === 'confirmar' && confirmacoes[numero]) {
 
-            await fetch(`https://nexus-money-production-39d6.up.railway.app/api/deletar-usuario/${numeroLimpo}`);
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/deletar-usuario/${numeroLimpo}`);
 
-            delete confirmacoes[numero];
+        delete confirmacoes[numero];
 
-            return msg.reply(`👋 Reset concluído.
+        return msg.reply(`👋 Reset concluído.
 
 Qual seu nome?`);
-        }
     }
 
 });
