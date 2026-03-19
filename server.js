@@ -175,6 +175,39 @@ app.post('/nova-senha', async (req, res) => {
     res.redirect(`/user/${numero.replace('@c.us','')}`);
 });
 
+// 📊 DASHBOARD
+app.get('/user/:numero', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    // 🔐 PROTEÇÃO DE SESSÃO
+    if (!req.session.usuario || req.session.usuario !== numero) {
+        return res.redirect(`/login/${req.params.numero}`);
+    }
+
+    const user = await User.findOne({ numero });
+
+    if (!user) return res.send('Usuário não encontrado');
+
+    res.send(`
+    <html>
+    <body style="background:#020617;color:white;font-family:Arial;padding:20px;">
+
+        <h2>👋 ${user.nome}</h2>
+
+        <div style="background:#1e293b;padding:20px;border-radius:10px;">
+            <h3>Bem-vindo ao Nexus Money 💰</h3>
+
+            <p>Seu acesso está funcionando corretamente!</p>
+
+            <p>Em breve aqui estarão seus gráficos 📊</p>
+        </div>
+
+    </body>
+    </html>
+    `);
+});
+
 // 🚀 SERVIDOR
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
