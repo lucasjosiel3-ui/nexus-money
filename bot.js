@@ -195,9 +195,15 @@ setInterval(async () => {
     const hora = String(agora.getHours()).padStart(2, '0');
     const minuto = String(agora.getMinutes()).padStart(2, '0');
 
-    if (`${hora}:${minuto}` !== '21:00') return;
+    const horaAtual = `${hora}:${minuto}`;
+    const horarios = ['07:00', '13:00', '19:00'];
 
-    console.log('📊 Enviando resumo diário...');
+    if (!horarios.includes(horaAtual)) return;
+
+    console.log('🔔 Verificando contas...');
+
+    // 🔥 AQUI VOCÊ PRECISA LISTA DE USUÁRIOS
+    // (por enquanto simples — depois podemos otimizar)
 
 }, 60000);
 

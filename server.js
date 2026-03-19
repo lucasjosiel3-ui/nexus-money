@@ -23,6 +23,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.use(session({
     secret: 'nexusmoney123',
@@ -105,6 +106,26 @@ app.get('/api/despesa/:numero/:valor/:descricao/:categoria/:data', async (req, r
     res.send({ status: 'ok' });
 });
 
+// 📅 BUSCAR CONTAS (BOT)
+app.get('/api/contas/:numero', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    const user = await User.findOne({ numero });
+
+    if (!user) return res.json([]);
+
+    res.json(user.contas || []);
+});
+
+// 👥 TODOS USUÁRIOS (BOT)
+app.get('/api/usuarios', async (req, res) => {
+
+    const users = await User.find({});
+
+    res.json(users);
+});
+
 // 🔍 BUSCAR USUÁRIO
 app.get('/api/buscar/:numero', async (req, res) => {
 
@@ -116,6 +137,19 @@ app.get('/api/buscar/:numero', async (req, res) => {
     } catch (err) {
         res.status(500).json({ erro: 'Erro interno' });
     }
+});
+
+// 🔄 SINCRONIZAR CONTAS (BOT → SERVER)
+app.post('/api/sync-contas', async (req, res) => {
+
+    const user = req.body;
+
+    await User.updateOne(
+        { numero: user.numero },
+        { contas: user.contas }
+    );
+
+    res.send({ status: 'ok' });
 });
 
 // 🧹 DELETAR USUÁRIO
