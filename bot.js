@@ -6,7 +6,7 @@ const client = new Client();
 
 let confirmacoes = {};
 
-// 🔑 SENHA TEMP
+// 🔑 SENHA
 function gerarSenhaTemp() {
     return Math.random().toString(36).slice(-6);
 }
@@ -17,6 +17,14 @@ function gerarNomeUnico(nomeBase) {
     return `${nomeBase}${numero}`;
 }
 
+// 📅 DATA HOJE
+function hojeFormatado() {
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    return `${dia}/${mes}`;
+}
+
 client.on('qr', qr => {
     qrcode.generate(qr, { small: true });
 });
@@ -25,6 +33,9 @@ client.on('ready', () => {
     console.log('Bot conectado!');
 });
 
+// =========================
+// 🔥 MENSAGENS
+// =========================
 client.on('message', async msg => {
 
     const numero = msg.from;
@@ -47,7 +58,6 @@ Qual seu nome?`);
     // 👤 CADASTRO
     if (!user.nome) {
 
-        // 🚫 BLOQUEAR COMANDOS
         if (
             texto.startsWith('agendar') ||
             texto.startsWith('receita') ||
@@ -78,36 +88,68 @@ Qual seu nome?`);
     // 💰 RECEITA
     if (texto.startsWith('receita')) {
 
-        const partes = texto.split('|');
+        const partes = texto.split('|').map(p => p.trim());
         const valor = parseFloat(partes[1].replace(',', '.'));
 
-        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/receita/${numeroLimpo}/${valor}`);
+        const descricao = partes[2] || '---';
+        const data = partes[3] || hojeFormatado();
 
-        return msg.reply('💰 Receita registrada!');
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/receita/${numeroLimpo}/${valor}/${descricao}/${data}`);
+
+        return msg.reply(`💰 Receita registrada!
+
+📌 ${descricao}
+📅 ${data}
+💵 R$${valor}`);
     }
 
     // 💸 DESPESA
     if (texto.startsWith('despesa')) {
 
-        const partes = texto.split('|');
+        const partes = texto.split('|').map(p => p.trim());
         const valor = parseFloat(partes[1].replace(',', '.'));
-        const categoria = partes[3];
 
-        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/despesa/${numeroLimpo}/${valor}/${categoria}`);
+        const descricao = partes[2] || '---';
+        const categoria = partes[3] || 'Outros';
+        const data = partes[4] || hojeFormatado();
 
-        return msg.reply('💸 Despesa registrada!');
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/despesa/${numeroLimpo}/${valor}/${descricao}/${categoria}/${data}`);
+
+        return msg.reply(`💸 Despesa registrada!
+
+📌 ${descricao}
+📂 ${categoria}
+📅 ${data}
+💰 R$${valor}`);
     }
 
     // 📅 AGENDAR
     if (texto.startsWith('agendar')) {
 
-        const partes = texto.split('|');
+        const partes = texto.split('|').map(p => p.trim());
 
-        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${partes[2]}/${partes[1]}/${partes[4]}/${partes[3]}`);
+        const valor = parseFloat(partes[1].replace(',', '.'));
+        const descricao = partes[2];
+        const tipo = partes[3] || 'avulsa';
+        const data = partes[4];
 
-        return msg.reply('📅 Conta agendada!');
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/adicionar-conta/${numeroLimpo}/${descricao}/${valor}/${data}/${tipo}`);
+
+        return msg.reply(`📅 Conta agendada!
+
+📌 ${descricao}
+💰 R$${valor}
+📅 ${data}`);
     }
 
+    // 🌐 DASHBOARD
+    if (texto === 'dashboard') {
+        return msg.reply(`🌐 Acesse:
+
+https://nexus-money-production-39d6.up.railway.app/login/${numeroLimpo}`);
+    }
+
+    // 🧹 RESET
     if (texto === 'resetar') {
         confirmacoes[numero] = true;
         return msg.reply('Digite CONFIRMAR');
@@ -123,5 +165,41 @@ Qual seu nome?`);
     }
 
 });
+
+// =========================
+// 🔔 LEMBRETES (3x ao dia)
+// =========================
+setInterval(async () => {
+
+    const agora = new Date();
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const minuto = String(agora.getMinutes()).padStart(2, '0');
+
+    const horaAtual = `${hora}:${minuto}`;
+    const horarios = ['07:00', '13:00', '19:00'];
+
+    if (!horarios.includes(horaAtual)) return;
+
+    console.log('🔔 Verificando contas...');
+
+    // 🔥 aqui depois podemos integrar melhor com mongo
+}, 60000);
+
+
+// =========================
+// 📊 RESUMO DIÁRIO
+// =========================
+setInterval(async () => {
+
+    const agora = new Date();
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const minuto = String(agora.getMinutes()).padStart(2, '0');
+
+    if (`${hora}:${minuto}` !== '21:00') return;
+
+    console.log('📊 Enviando resumo diário...');
+
+}, 60000);
+
 
 client.initialize();

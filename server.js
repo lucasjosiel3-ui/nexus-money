@@ -63,6 +63,48 @@ app.get('/api/criar-usuario/:numero/:nome/:senha', async (req, res) => {
     res.send({ status: 'atualizado' });
 });
 
+// 💰 RECEITA
+app.get('/api/receita/:numero/:valor/:descricao/:data', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    const user = await User.findOne({ numero });
+
+    if (!user) return res.send('Usuário não encontrado');
+
+    const valor = parseFloat(req.params.valor);
+
+    user.receitas = (user.receitas || 0) + valor;
+
+    await user.save();
+
+    res.send({ status: 'ok' });
+});
+
+
+// 💸 DESPESA
+app.get('/api/despesa/:numero/:valor/:descricao/:categoria/:data', async (req, res) => {
+
+    const numero = req.params.numero + '@c.us';
+
+    const user = await User.findOne({ numero });
+
+    if (!user) return res.send('Usuário não encontrado');
+
+    if (!user.despesas) user.despesas = [];
+
+    user.despesas.push({
+        valor: parseFloat(req.params.valor),
+        descricao: req.params.descricao,
+        categoria: req.params.categoria,
+        data: req.params.data
+    });
+
+    await user.save();
+
+    res.send({ status: 'ok' });
+});
+
 // 🔍 BUSCAR USUÁRIO
 app.get('/api/buscar/:numero', async (req, res) => {
 
