@@ -200,10 +200,58 @@ setInterval(async () => {
 
     if (!horarios.includes(horaAtual)) return;
 
-    console.log('🔔 Verificando contas...');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const hoje = `${dia}/${mes}`;
 
-    // 🔥 AQUI VOCÊ PRECISA LISTA DE USUÁRIOS
-    // (por enquanto simples — depois podemos otimizar)
+    // 🔥 BUSCAR TODOS USUÁRIOS
+    let res = await fetch('https://nexus-money-production-39d6.up.railway.app/api/usuarios');
+    let usuarios = await res.json();
+
+    for (let user of usuarios) {
+
+        const numero = user.numero;
+
+        if (!user.contas) continue;
+
+        // 🔔 CONTAS PENDENTES
+        const pendentes = user.contas.filter(c =>
+            !c.pago && c.data === hoje
+        );
+
+        if (pendentes.length > 0) {
+
+            let msg = `🔔 *Contas de hoje*\n\n`;
+
+            pendentes.forEach(c => {
+                msg += `📌 ${c.descricao}\n💰 R$${c.valor}\n\n`;
+            });
+
+            await client.sendMessage(numero, msg);
+        }
+
+        // ✅ PAGAMENTO CONFIRMADO
+        user.contas.forEach(c => {
+
+            if (c.pago && !c.notificado) {
+
+                client.sendMessage(numero,
+`✅ Pagamento confirmado!
+
+📌 ${c.descricao}
+💰 R$${c.valor}`);
+
+                c.notificado = true;
+            }
+        });
+
+        // 🔥 ATUALIZA NO SERVER (IMPORTANTE)
+        await fetch(`https://nexus-money-production-39d6.up.railway.app/api/sync-contas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(user)
+        });
+    }
 
 }, 60000);
 
